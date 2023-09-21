@@ -88,11 +88,12 @@ num_vect >= 6
 my_char <- c("My","name","is")
 my_char
 paste(my_char, collapse = " ")
-c(my_char, "Mikhail")
+c(my_char, "Mikhail")s
 my_name
 paste(my_name,collapse = " ")
 paste("Hello", "world!", sep = " ")
 paste(1:3, c("X", "Y", "Z"), sep = "")
 paste(LETTERS, 1:4, sep = "-")
+
 ```
 
