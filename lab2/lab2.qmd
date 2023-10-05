@@ -1,3 +1,10 @@
+---
+title: "lab2"
+format: 
+    md:
+        output-file: README.md
+editor: visual
+---
 ```{r}
 library(dplyr)
 ```
