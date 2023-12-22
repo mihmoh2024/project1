@@ -1,0 +1,125 @@
+---
+title: "lab4"
+format: 
+    md:
+        output-file: README.md
+editor: visual
+---
+# Информационно-аналитические технологии поиска угроз информационной безопасности 
+
+## Лабораторная работа №4
+
+## Цель работы
+
+1.Зекрепить практические навыки использования языка программирования R для обработки данных
+2.Закрепить знания основных функций обработки данных экосистемы tidyverse языка R
+3.Закрепить навыки исследования метаданных DNS трафика
+
+## Исходные данные
+
+1.ОС Windows 10
+2.WSL2 
+3.Ноутбук 
+
+## План
+
+Вы исследуете подозрительную сетевую активность во внутренней сети Доброй Организации. Вам в руки по-
+пали метаданные о DNS трафике в исследуемой сети. Исследуйте файлы, восстановите данные, подготовьте
+их к анализу и дайте обоснованные ответы на поставленные вопросы исследования.
+
+## Ход работы
+1.Подготовка данных
+```{r}
+library(readr)
+library(dplyr)
+
+```
+
+1.Импортируйте данные DNS
+```{r}
+header <- read.csv('header.csv')
+```
+```{r}
+log <- read.csv('dns.log',sep ='\t',header=FALSE)
+log
+```
+2.Добавьте пропущенные данные о структуре данных (назначении столбцов)
+```{r}
+names(log) <- c("ts","uid","id.orig_h","id.orig_p","id.resp_h","id.resp_p","proto","trans_id","query","qclass","qclass_name","qtype","qtype_name","rcode","rcode_name","AA","TC", "RD","RA","Z","answers","TTLs","rejected")
+log
+```
+
+3.Преобразуйте данные в столбцах в нужный формат
+```{r}
+log %>% mutate(qclass = as.numeric(qclass),
+               qtype = as.numeric(qtype),
+               rcode=as.numeric(rcode))
+```
+4.Просмотрите общую структуру данных с помощью функции glimpse()
+```{r}
+glimpse(log)
+```
+4.Сколько участников информационного обмена в сети Доброй Организации?
+```{r}
+log %>% count(log$id.orig_h) %>% nrow()
+```
+5.Какое соотношение участников обмена внутри сети и участников обращений к внешним ресурсам?
+```{r}
+temp1 <- log %>%
+  filter(qtype_name != 'A',qtype_name != 'AA',qtype_name != 'AAA',qtype_name != 'AAAA') %>%
+  group_by(uid) %>%
+  summarise(summa=n()) %>%
+  nrow()
+temp2 <- log  %>%
+  filter(qtype_name == 'A'|qtype_name == 'AA'|qtype_name == 'AAA'|qtype_name == 'AAAA') %>%
+  group_by(uid) %>%
+  summarise(summa=n()) %>%
+  nrow()
+  temp1 / temp2
+```
+
+6.Найдите топ-10 участников сети, проявляющих наибольшую сетевую активность.
+```{r}
+log %>%
+  group_by(id.orig_h) %>%
+  summarise(summa=n()) %>%
+  arrange(desc(summa)) %>% 
+  head(10)
+  
+```
+
+7.Найдите топ-10 доменов, к которым обращаются пользователи сети и соответственное количество обращений
+```{r}
+temp3 <- log %>%
+  filter(qtype_name == "A"|qtype_name == "AA"|qtype_name == "AAA"|qtype_name == "AAAA") %>%
+  group_by(query) %>%
+  summarise(summa=n()) %>%
+  arrange(desc(summa)) %>% 
+  head(10)
+temp3
+```
+
+8.Опеределите базовые статистические характеристики (функция summary()) интервала времени между последовательным обращениями к топ-10 доменам.
+```{r}
+ summary(diff((log %>% filter(tolower(query) %in% temp3$query) %>% arrange(ts))$ts))
+
+```
+
+9.Часто вредоносное программное обеспечение использует DNS канал в качестве канала управления, периодически отправляя запросы на подконтрольный злоумышленникам DNS сервер. По периодическим запросам на один и тот же домен можно выявить скрытый DNS канал. Есть ли такие IP адреса в исследуемом датасете?
+```{r}
+etoslyshkomslozno <- 0
+```
+10.Определите местоположение (страну, город) и организацию-провайдера для топ-10 доменов. Для этого можно использовать сторонние сервисы
+```{r}
+temp3
+```
+1)teredo.ipv6.microsoft.com	Вы указали недействительный URL-адрес или домен не существует.		
+2)tools.google.com Mountain View United States Google LLC
+3)www.apple.com		Cupertino United States	Apple Inc.
+4)safebrowsing.clients.google.com	Mountain View United States Google LLC		
+5)imap.gmail.com Mountain View	United States	Google LLC
+6)stats.norton.com Washington United States Microsoft Corporation				
+7)www.google.com Stockholm Sweden Google LLC
+8)ratings-wrs.symantec.com Washington United States Microsoft Corporation
+9)api.twitter.com	San Francisco United States Twitter Inc.		
+10)api.facebook.com Väddö Sweden META PLATFORMS IRELAND LIMITED
